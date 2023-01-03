@@ -36,7 +36,7 @@ class Diffusion(nn.Module):
     def sample_initial_image(self, model, batch_size):
         model.eval()
         x = torch.randn((batch_size, 3, self.img_size, self.img_size)).to(self.device)
-        for t in range(self.timesteps, -1, -1):
+        for t in range(self.timesteps-1, -1, -1):
             alpha_bar = self.alpha[t][:, None, None, None]
             predicted_noise = model(x, t)
             sigma = self.noise_scheduler[t][:, None, None, None]
