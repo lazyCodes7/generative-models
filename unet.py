@@ -173,13 +173,3 @@ class UNet(nn.Module):
         image = self.up(image, timestep, skip_connections)
         image = self.final_conv(image)
         return image
-
-
-
-
-        
-
-
-        
-
-    
