@@ -38,7 +38,7 @@ class Diffusion(nn.Module):
         x = torch.randn((batch_size, 3, self.img_size, self.img_size)).to(self.device)
         for timestep in range(self.timesteps-1, -1, -1):
             t = (torch.ones(batch_size) * timestep).long().to(self.device)
-            print(self.alpha.shape)
+            #print(self.alpha.shape)
             alpha = self.alpha[t][:, None, None, None]
             alpha_bar = self.alpha_bar[t][:, None, None, None]
             predicted_noise = model(x, t)
