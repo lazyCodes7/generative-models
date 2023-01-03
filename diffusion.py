@@ -13,7 +13,7 @@ class Diffusion(nn.Module):
         self.beta_end = beta_end
         self.timesteps = timesteps
         self.device = device
-        self.noise_scheduler = self.init_noise_scheduler()
+        self.noise_scheduler = self.init_noise_scheduler().to(self.device)
         self.alpha = 1 - self.noise_scheduler
         self.alpha_bar = torch.cumprod(self.noise_scheduler, dim = 0)
 
@@ -29,7 +29,7 @@ class Diffusion(nn.Module):
     def sample_noise_image(self, image, timestep):
         sqrt_alpha_bar = torch.sqrt(self.alpha_bar[timestep])[:, None, None, None]
         sqrt_one_minus_alpha_bar = torch.sqrt(1 - self.alpha_bar[timestep])[:, None, None, None]
-        eps = torch.randn_like(image)
+        eps = torch.randn_like(image).to(self.device)
         noise_image = sqrt_alpha_bar*image + sqrt_one_minus_alpha_bar*eps
         return noise_image, eps
     
@@ -41,9 +41,9 @@ class Diffusion(nn.Module):
             predicted_noise = model(x, t)
             sigma = self.noise_scheduler[t][:, None, None, None]
             if t > 1:
-                noise = torch.randn_like(x)
+                noise = torch.randn_like(x).to(self.device)
             else:
-                noise = torch.zeros_like(x)
+                noise = torch.zeros_like(x).to(self.device)
             x = 1 / torch.sqrt(alpha_bar) * (x - ((1 - alpha_bar) / (torch.sqrt(1 - alpha_bar))) * predicted_noise) + torch.sqrt(sigma) * noise
         model.train()
         x = (x.clamp(-1, 1) + 1) / 2
