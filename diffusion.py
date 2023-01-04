@@ -15,7 +15,7 @@ class Diffusion(nn.Module):
         self.device = device
         self.noise_scheduler = self.init_noise_scheduler().to(self.device)
         self.alpha = 1 - self.noise_scheduler
-        self.alpha_bar = torch.cumprod(self.noise_scheduler, dim = 0)
+        self.alpha_bar = torch.cumprod(self.alpha, dim = 0)
 
         self.img_size = img_size
 
