@@ -10,6 +10,8 @@ class DoubleConv(nn.Module):
         super(DoubleConv, self).__init__()
         self.conv = nn.Sequential(
             nn.Conv2d(in_channels, out_channels, 3, 1, 1, bias = False),
+
+            # GroupNorm as it is mentioned in the paper
             nn.GroupNorm(1, out_channels),
             nn.GELU(),
             nn.Conv2d(out_channels, out_channels, 3, 1, 1, bias = False),
@@ -23,7 +25,10 @@ class SelfAttention(nn.Module):
     def __init__(self, channels):
         super(SelfAttention, self).__init__()
         self.channels = channels
+        # MHA
         self.mha = nn.MultiheadAttention(channels, 4, batch_first=True)
+
+        
         self.ln = nn.LayerNorm([channels])
         self.ff_self = nn.Sequential(
             nn.LayerNorm([channels]),
@@ -37,8 +42,13 @@ class SelfAttention(nn.Module):
         x = x.view(-1, self.channels, image_size * image_size).swapaxes(1, 2)
         x_ln = self.ln(x)
         attention_value, _ = self.mha(x_ln, x_ln, x_ln)
+        
+        # Typical Layernorm + output from MHA
         attention_value = attention_value + x
+
+        # Passing through a Feed forward
         attention_value = self.ff_self(attention_value) + attention_value
+
         return attention_value.swapaxes(2, 1).view(-1, self.channels, image_size, image_size)
 
 
@@ -117,6 +127,7 @@ class UpBlock(nn.Module):
         skip_connections = skip_connections[::-1]
         
         for i in range(0, len(self.upsample), 2):
+
             image = self.upsample[i](image)
             image = torch.cat((image, skip_connections[i//2]), dim = 1)
             image = self.upsample[i+1](image)
@@ -168,6 +179,32 @@ class UNet(nn.Module):
     def forward(self, image, timestep):
         timestep = timestep.unsqueeze(-1).float()
         timestep = self.pos_encoding(timestep, self.time_dim)
+        image, skip_connections = self.down(image, timestep)
+        image = self.bottleneck(image) 
+        image = self.up(image, timestep, skip_connections)
+        image = self.final_conv(image)
+        return image
+
+class ConditionalUNet(UNet):
+    def __init__(
+        self,
+        in_channels = 3,
+        out_channels = 3,
+        features = [
+            64, 128, 256, 512
+        ],
+        time_dim = 256,
+        device = 'cpu',
+        num_classes = 10
+    ):
+        super().__init__(in_channels, out_channels, features, time_dim, device).__init__()
+        self.embedding = nn.Embedding(num_classes, time_dim)
+    
+
+    def forward(self, image, timestep, label):
+        timestep = timestep.unsqueeze(-1).float()
+        timestep = self.pos_encoding(timestep, self.time_dim)
+        timestep = self.embedding(label) + timestep
         image, skip_connections = self.down(image, timestep)
         image = self.bottleneck(image) 
         image = self.up(image, timestep, skip_connections)
