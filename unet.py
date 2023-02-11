@@ -5,7 +5,8 @@ class DoubleConv(nn.Module):
     def __init__(
         self,
         in_channels,
-        out_channels
+        out_channels,
+        residual = False
     ):
         super(DoubleConv, self).__init__()
         self.conv = nn.Sequential(
@@ -19,7 +20,10 @@ class DoubleConv(nn.Module):
             nn.GroupNorm(1, out_channels),
         )
     def forward(self, x):
-        return self.conv(x)
+        if self.residual:
+            return F.gelu(x + self.double_conv(x))
+        else:
+            return self.conv(x)
 
 class SelfAttention(nn.Module):
     def __init__(self, channels):
@@ -61,10 +65,18 @@ class DownBlock(nn.Module):
         self.timestep_emb = nn.ModuleList()
         for feature in features:
             self.downsample.append(
-                DoubleConv(
-                    in_channels,
-                    feature
+                nn.Sequential(
+                    DoubleConv(
+                        in_channels,
+                        in_channels,
+                        residual = True
+                    ),
+                    DoubleConv(
+                        in_channels,
+                        feature
+                    )
                 )
+
             )
             self.timestep_emb.append(
                 nn.Sequential(
@@ -108,7 +120,10 @@ class UpBlock(nn.Module):
                 )
             )
             self.upsample.append(
-                DoubleConv(feature*2, feature)
+                nn.Sequential(
+                    DoubleConv(feature*2, feature*2, residual=True),
+                    DoubleConv(feature*2, feature)
+                )
             )
             self.attention.append(
                 SelfAttention(feature)
