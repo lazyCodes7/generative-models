@@ -197,7 +197,7 @@ class ConditionalUNet(UNet):
         device = 'cpu',
         num_classes = 10
     ):
-        super().__init__(in_channels, out_channels, features, time_dim, device).__init__()
+        super().__init__(in_channels, out_channels, features, time_dim, device)
         self.embedding = nn.Embedding(num_classes, time_dim)
     
 
