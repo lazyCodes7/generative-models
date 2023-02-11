@@ -9,6 +9,7 @@ class DoubleConv(nn.Module):
         residual = False
     ):
         super(DoubleConv, self).__init__()
+        self.residual = residual
         self.conv = nn.Sequential(
             nn.Conv2d(in_channels, out_channels, 3, 1, 1, bias = False),
 
