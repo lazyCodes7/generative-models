@@ -35,6 +35,6 @@ class ConditionalDiffusion(Diffusion):
                   noise = torch.zeros_like(x)
               x = 1 / torch.sqrt(alpha) * (x - ((1 - alpha) / (torch.sqrt(1 - alpha_bar))) * predicted_noise) + torch.sqrt(sigma) * noise
         model.train()
-        x = (x.clamp(-1, 1) + 1) / 2
-        x = (x * 255).type(torch.uint8)
+        x = x.clamp(-1, 1)
+        x = self.invTrans(x)
         return x
