@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import torchvision.transforms as transforms
 class Diffusion(nn.Module):
     def __init__(
         self,
@@ -18,6 +19,19 @@ class Diffusion(nn.Module):
         self.alpha_bar = torch.cumprod(self.alpha, dim = 0)
 
         self.img_size = img_size
+        self.invTrans = transforms.Compose(
+            [ 
+                transforms.Normalize(    
+                    mean = [ 0., 0., 0. ],                         
+                    std = [ 1/0.2023, 1/0.1994, 1/0.2010 ]
+                ),
+                transforms.Normalize(
+                        mean = [ -0.4914, -0.4822, -0.4465 ],
+                        std = [ 1., 1., 1. ]
+                ),
+                                    
+            ]
+        )
 
     def sample_timesteps(self, batch_size):
         t = torch.randint(0, self.timesteps, size = (batch_size, ))
@@ -49,6 +63,7 @@ class Diffusion(nn.Module):
                   noise = torch.zeros_like(x)
               x = 1 / torch.sqrt(alpha) * (x - ((1 - alpha) / (torch.sqrt(1 - alpha_bar))) * predicted_noise) + torch.sqrt(sigma) * noise
         model.train()
-        x = (x.clamp(-1, 1) + 1) / 2
-        x = (x * 255).type(torch.uint8)
+        x = x.clamp(-1, 1)
+        x = self.invTrans(x)
         return x
+        
