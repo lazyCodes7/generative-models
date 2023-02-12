@@ -1,6 +1,7 @@
 import torch.nn as nn
 import torch
 import torch.nn.functional as F
+#from ema_pytorch import EMA
 class DoubleConv(nn.Module):
     def __init__(
         self,
@@ -20,9 +21,10 @@ class DoubleConv(nn.Module):
             nn.BatchNorm2d(out_channels),
             nn.GroupNorm(1, out_channels),
         )
+        self.s = nn.Conv2d(in_channels, out_channels, 3, 1, 1, bias = False)
     def forward(self, x):
         if self.residual:
-            return F.gelu(x + self.double_conv(x))
+            return F.gelu(self.s(x) + self.conv(x))
         else:
             return self.conv(x)
 
@@ -69,12 +71,8 @@ class DownBlock(nn.Module):
                 nn.Sequential(
                     DoubleConv(
                         in_channels,
-                        in_channels,
+                        feature,
                         residual = True
-                    ),
-                    DoubleConv(
-                        in_channels,
-                        feature
                     )
                 )
 
@@ -122,8 +120,7 @@ class UpBlock(nn.Module):
             )
             self.upsample.append(
                 nn.Sequential(
-                    DoubleConv(feature*2, feature*2, residual=True),
-                    DoubleConv(feature*2, feature)
+                    DoubleConv(feature*2, feature, residual = True)
                 )
             )
             self.attention.append(
