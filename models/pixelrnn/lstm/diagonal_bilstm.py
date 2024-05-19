@@ -2,12 +2,10 @@ from ..common.masked_convolution import MaskedConvolution2D
 import torch.nn as nn
 import torch
 class DiagonalLSTM(nn.Module):
-  def __init__(self, h, in_channels, out_channels, in_channels_s, out_channels_s, batch_size, input_size, device):
+  def __init__(self, h, in_channels, out_channels, in_channels_s, out_channels_s, input_size, device):
     super(DiagonalLSTM, self).__init__()
     self.itos = MaskedConvolution2D(in_channels=in_channels, out_channels=out_channels, kernel_size=(1,1), mask_type='B', device=device)
-    self.stos = MaskedConvolution2D(in_channels=in_channels_s, out_channels=out_channels_s, kernel_size=(2,1), mask_type='B', device=device)
-    self.sigmoid = nn.Sigmoid()
-    self.tanh = nn.Tanh()
+    self.stos = nn.Conv2d(in_channels=in_channels_s, out_channels=out_channels_s, kernel_size=(2,1))
     self.num_h = h
     self.device = device
     h0, c0 = self.init_hidden_state(input_size)
@@ -50,7 +48,7 @@ class DiagonalLSTM(nn.Module):
         i, g, f, o = torch.split(hidden_out, (4 * self.num_h)//4, dim=1)
         cell_state = torch.mul(torch.sigmoid(f), cell_states[j]) + torch.mul(torch.sigmoid(i), torch.tanh(g))
         cell_states.append(cell_state)
-        hidden_state = torch.mul(cell_states[j], torch.sigmoid(o))
+        hidden_state = torch.mul(torch.tanh(cell_states[j]), torch.sigmoid(o))
         hidden_states.append(hidden_state)
 
     hidden_states = torch.stack(hidden_states[1:], dim = 2).squeeze().permute(0,1,3,2)
@@ -60,7 +58,6 @@ class DiagonalLSTM(nn.Module):
     c0 = torch.randn((self.num_h, input_size, 1)).to(self.device)
     return h0, c0
   
-
 class DiagonalBiLSTM(nn.Module):
   def __init__(self, h, in_channels, out_channels, in_channels_s, out_channels_s, batch_size, input_size, device):
     super(DiagonalBiLSTM, self).__init__()
